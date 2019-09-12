@@ -1,0 +1,107 @@
+---
+title: "Machine Learning Course Project"
+author: "Toby Wright"
+date: "9/12/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+# Background
+
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: http://web.archive.org/web/20161224072740/http:/groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset).
+
+# Data
+
+The training data for this project are available here:
+
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
+
+The test data are available here:
+
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
+
+The data for this project come from this source: http://web.archive.org/web/20161224072740/http:/groupware.les.inf.puc-rio.br/har. If you use the document you create for this class for any purpose please cite them as they have been very generous in allowing their data to be used for this kind of assignment.
+
+# Plan
+
+For this project I aim to predict the classe variable, to do this I plan to use random forests. Then I will test this model on the testing set of 20 observations.
+
+
+# Load Packages and read in data
+Seed set to 245.
+
+```{r, warning=FALSE, message=FALSE}
+library(caret)
+library(rattle)
+library(randomForest)
+library(dplyr)
+library(ggplot2)
+library(rpart)
+library(rpart.plot)
+library(rattle)
+library(knitr)
+
+set.seed(245)
+
+training = read.csv("pml-training.csv", na.strings=c("NA","#DIV/0!", ""))
+testing = read.csv("pml-testing.csv", na.strings=c("NA","#DIV/0!", ""))
+
+```
+
+# Clean Data
+
+```{r}
+
+# remove any column with all NA values
+training = training[,colSums(is.na(training)) == 0]
+testing = testing[,colSums(is.na(testing)) == 0]
+
+# remove columns that are not relevant to prediction user_name, raw_timestamp_part_1, raw_timestamp_part_,2 cvtd_timestamp, new_window, and  num_window (columns 1 to 7). 
+training = training[,-c(1:7)]
+testing = testing[,-c(1:7)]
+
+# create data partition for training set
+
+intrain = createDataPartition(y= training$classe, p = 0.7, list = F)
+
+trainingset = training[intrain,]
+testingset = training[-intrain,]
+
+```
+
+# Random Forest Model
+
+```{r}
+
+model = randomForest(classe ~., data = trainingset)
+print(model)
+plot(model, log = 'y', main= "Random Forest Prediction model")
+legend("top", colnames(model$err.rate),col=,cex=0.8,fill=1:6)
+```
+
+# Predicting using the testing set
+
+```{r}
+
+predicting = predict(model, testingset, type = 'class')
+confusionMatrix(predicting, testingset$classe)
+ose <- 1 - as.numeric(confusionMatrix(testingset$classe, predicting)$overall[1])
+ose
+```
+
+As seen above the accuracy of the random forest is 99%. Out of sample error is 0.005.
+
+
+# Predicting the 20 classes from the testing data
+
+```{r}
+
+testing$classe = predict(model, testing)
+
+kable(testing$classe)
+
+```
+
+
